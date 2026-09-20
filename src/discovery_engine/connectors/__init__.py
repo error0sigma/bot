@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from .base import Connector, ConnectorContext, Sink
 from .github import GitHubConnector
 from .http import PublicHttpConnector

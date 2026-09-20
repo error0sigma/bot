@@ -1,34 +1,39 @@
 # Public Discovery Engine
 
-Универсальный, расширяемый движок итеративного discovery по публичным и законно доступным источникам.
+Universal public-source discovery engine with plugin architecture.
 
-## Возможности
+## Features
 
-- граф сущностей и typed relationships с `source`, `discovered_at`, `confidence`;
-- очередь задач с приоритетами, глубиной, дедупликацией, retry и backoff;
-- плагины-коннекторы: новые типы сущностей, полей и источников добавляются без изменения ядра;
-- configurable limits: `max_depth`, `max_sources`, `max_requests_per_source`, `max_runtime`, `confidence_threshold`;
-- SQLite persistence и история изменений;
-- безопасный HTTP connector с allowlist, robots.txt, rate limit, timeout и размером ответа;
-- фоновое обновление ранее найденных источников;
-- adapter interface для Google Sheets и других sink-ов без вшивания credentials;
-- dry-run и audit log.
+- entity graph with typed relationships, source, confidence and audit trail
+- discovery queue with priority, deduplication and retry
+- configurable runtime limits
+- entity resolution and deduplication
+- GitHub, RSS, search API, and HTTP connectors
+- Google Sheets sink and background scheduler
+- SQLite persistence with schema versioning
+- CLI for seed, run, export and import
 
-Проект предназначен только для законного исследования публичной информации. Он не обходит авторизацию, paywall, CAPTCHA или технические ограничения источников. Перед использованием проверьте применимое законодательство, условия источников и необходимость уведомления/согласия.
-
-## Быстрый старт
+## Quick start
 
 ```bash
-python -m discovery_engine.cli init-db discovery.db
-python -m discovery_engine.cli discover discovery.db 'Ivan Ivanov' --config config.example.json
-python -m discovery_engine.cli run discovery.db --config config.example.json
-python -m discovery_engine.cli export discovery.db results.json
+pip install -e .
+discovery init-db discovery.db
+discovery discover discovery.db "Ivan Ivanov" --config config.example.json
+discovery export discovery.db results.json
 ```
 
-Для фонового режима используйте `run --watch --interval 3600`. Коннекторы регистрируются в `Engine.register_connector()`, sinks — в `Engine.register_sink()`.
+## Config example
 
-## Архитектура
+```json
+{
+  "limits": {"max_depth": 2, "max_sources": 50, "max_runtime": 300, "confidence_threshold": 0.55},
+  "http": {"enabled": true, "allowed_domains": ["api.github.com", "github.com"], "requests_per_minute": 30},
+  "connectors": {"github": {"enabled": true}, "rss": {"enabled": false}, "search_api": {"enabled": false}},
+  "sheets": {"enabled": false, "webhook_url": "https://example.com/webhook"},
+  "background": {"refresh_after_seconds": 86400, "max_items_per_cycle": 100}
+}
+```
 
-`Seed -> DiscoveryQueue -> Connector.search -> Findings -> EntityResolver -> GraphStore -> new queue tasks`.
+## Notes
 
-Данные намеренно не ограничены фиксированным перечнем полей: `Entity.attributes` и `Finding.attributes` содержат расширяемые JSON-объекты. Коннектор сообщает `entity_types`, `relationship_types` и `capabilities`, а движок работает с общим контрактом.
+This project is designed for lawful public-source discovery only. It respects allowlists, HTTP limits, and does not bypass auth barriers, paywalls, or robots exclusions.

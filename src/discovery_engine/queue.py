@@ -3,6 +3,7 @@ from __future__ import annotations
 import heapq
 import time
 from dataclasses import dataclass
+
 from .models import SearchTask
 
 
@@ -22,13 +23,13 @@ class DiscoveryQueue:
 
     def put(self, entity_id: str, query: str, depth: int, priority: int = 0,
             connector: str | None = None, reason: str = "discovery") -> bool:
-        key = (query.strip().casefold(), connector)
+        key = (str(query).strip().casefold(), connector)
         if key in self._keys:
             return False
         self._keys.add(key)
         self._sequence += 1
-        heapq.heappush(self._heap, SearchTask(priority, self._sequence, entity_id, query,
-                                             depth, connector, reason=reason))
+        task = SearchTask(priority, self._sequence, entity_id, query, depth, connector, reason=reason)
+        heapq.heappush(self._heap, task)
         self.stats.queued += 1
         return True
 

@@ -1,7 +1,7 @@
 {
   "limits": {
     "max_depth": 2,
-    "max_sources": 100,
+    "max_sources": 50,
     "max_requests_per_source": 20,
     "max_runtime": 300,
     "confidence_threshold": 0.55,
@@ -10,17 +10,21 @@
   "http": {
     "enabled": true,
     "allowed_domains": ["api.github.com", "github.com"],
-    "user_agent": "public-discovery-engine/0.2 (+contact@example.invalid)",
+    "user_agent": "public-discovery-engine/0.2",
     "requests_per_minute": 30,
     "respect_robots_txt": true,
     "max_response_bytes": 2000000
   },
   "connectors": {
-    "github": {"enabled": true, "token_env": "GITHUB_TOKEN"},
-    "rss": {"enabled": true, "feeds": []},
-    "search_api": {"enabled": false, "url_env": "SEARCH_API_URL", "key_env": "SEARCH_API_KEY"},
-    "public_profiles": {"enabled": true, "platforms": []}
+    "github": {"enabled": true},
+    "rss": {"enabled": false, "feeds": []},
+    "search_api": {"enabled": false},
+    "public_profiles": {"enabled": true}
   },
-  "sheets": {"enabled": false, "webhook_url_env": "DISCOVERY_SHEETS_WEBHOOK_URL"},
-  "background": {"refresh_after_seconds": 86400, "max_items_per_cycle": 100, "interval": 3600}
+  "sheets": {"enabled": false, "webhook_url": "", "path": "discovery-sheets.jsonl"},
+  "background": {
+    "refresh_after_seconds": 86400,
+    "max_items_per_cycle": 100,
+    "interval": 3600
+  }
 }

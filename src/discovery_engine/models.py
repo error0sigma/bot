@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from pathlib import Path
+from datetime import datetime, timezone
 from typing import Any
 
 
 def utc_now() -> str:
-    from datetime import datetime, timezone
     return datetime.now(timezone.utc).isoformat()
 
 
@@ -62,13 +61,15 @@ class SearchTask:
 
 def stable_id(*parts: str) -> str:
     import hashlib
-    value = "|".join(p.strip().lower() for p in parts)
-    return hashlib.sha256(value.encode()).hexdigest()[:32]
-
-
-def json_default(value: Any) -> Any:
-    return value.__dict__ if hasattr(value, "__dict__") else str(value)
+    value = "|".join(p.strip().lower() for p in parts if p and p.strip())
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()[:32]
 
 
 def dumps(value: Any) -> str:
-    return json.dumps(value, ensure_ascii=False, default=json_default, sort_keys=True)
+    return json.dumps(value, ensure_ascii=False, default=_json_default, sort_keys=True)
+
+
+def _json_default(value: Any) -> Any:
+    if hasattr(value, "__dict__"):
+        return value.__dict__
+    return str(value)

@@ -9,7 +9,7 @@ from .base import Sink
 
 
 class GoogleSheetsSink(Sink):
-    """Simple sink for pushing snapshots to a Google Apps Script webhook or any JSON endpoint."""
+    """Push snapshots to a webhook or local file."""
 
     name = "google_sheets"
 

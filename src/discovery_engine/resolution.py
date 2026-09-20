@@ -5,7 +5,7 @@ import unicodedata
 from dataclasses import dataclass
 from typing import Any
 
-from .models import Entity, Finding, stable_id
+from .models import Entity
 
 
 @dataclass(frozen=True)
@@ -16,24 +16,25 @@ class Resolution:
 
 
 class EntityResolver:
-    """Conservative, explainable resolver; it never merges on label alone."""
+    """Conservative, explainable merging logic for entities with shared identifiers."""
 
     def resolve(self, entity: Entity, existing: list[dict[str, Any]]) -> Resolution | None:
         aliases = self._values(entity)
         best: Resolution | None = None
         for candidate in existing:
-            if candidate["type"] != entity.type:
+            if candidate.get("type") != entity.type:
                 continue
-            values = self._values_from_row(candidate)
-            overlap = aliases & values
+            candidate_values = self._values_from_row(candidate)
+            overlap = aliases & candidate_values
             score = 0.0
             reason = ""
-            if entity.attributes.get("canonical_url") and entity.attributes.get("canonical_url") in values:
+            if entity.attributes.get("canonical_url") and entity.attributes.get("canonical_url") in candidate_values:
                 score, reason = 0.98, "same canonical URL"
             elif overlap:
                 score, reason = min(0.95, 0.75 + 0.1 * len(overlap)), "shared normalized identifier"
-            elif self.normalize(entity.label) == self.normalize(candidate["label"]):
+            elif self.normalize(entity.label) == self.normalize(candidate.get("label", "")):
                 score, reason = 0.80, "same normalized label"
+
             if score >= 0.80 and (best is None or score > best.score):
                 best = Resolution(candidate["id"], score, reason)
         return best
@@ -42,8 +43,8 @@ class EntityResolver:
         match = self.resolve(entity, existing)
         if not match:
             return entity, None
+        row = next(item for item in existing if item["id"] == match.canonical_id)
         merged = dict(entity.attributes)
-        row = next(x for x in existing if x["id"] == match.canonical_id)
         old = row.get("attributes", {})
         if isinstance(old, str):
             import json
@@ -63,14 +64,15 @@ class EntityResolver:
     def _values(self, entity: Entity) -> set[str]:
         values = {self.normalize(entity.label)}
         for key, value in entity.attributes.items():
-            if key in {"username", "handle", "canonical_url", "url", "email", "login"}:
-                if isinstance(value, str): values.add(self.normalize(value))
+            if key in {"username", "handle", "canonical_url", "url", "email", "login"} and isinstance(value, str):
+                values.add(self.normalize(value))
             elif key in {"usernames", "aliases", "urls", "emails"} and isinstance(value, list):
-                values.update(self.normalize(str(x)) for x in value)
-        return {x for x in values if x}
+                values.update(self.normalize(str(v)) for v in value)
+        return {v for v in values if v}
 
     def _values_from_row(self, row: dict[str, Any]) -> set[str]:
-        import json
         attrs = row.get("attributes", {})
-        if isinstance(attrs, str): attrs = json.loads(attrs)
+        if isinstance(attrs, str):
+            import json
+            attrs = json.loads(attrs)
         return self._values(Entity(row["id"], row["type"], row["label"], attrs))

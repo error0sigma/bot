@@ -11,7 +11,7 @@ from ..models import Entity, Finding, stable_id
 
 
 class SearchAPIConnector(Connector):
-    """Generic REST-based search API connector; intended to plug into a provider such as SerpAPI, Bing, or a private proxy."""
+    """Generic REST connector for public search providers."""
 
     name = "search_api"
     entity_types = {"Person", "Profile", "Organization", "Publication"}
@@ -27,7 +27,9 @@ class SearchAPIConnector(Connector):
     def search(self, query: str, context: ConnectorContext) -> Iterable[Finding]:
         if not self.base_url or not query:
             return []
-        params = {"q": query, "key": self.api_key} if self.api_key else {"q": query}
+        params = {"q": query}
+        if self.api_key:
+            params["key"] = self.api_key
         url = f"{self.base_url}?{urllib.parse.urlencode(params)}"
         req = urllib.request.Request(url, headers={"User-Agent": "public-discovery-engine/0.2"})
         try:
@@ -38,13 +40,16 @@ class SearchAPIConnector(Connector):
         for item in payload.get("results", payload.get("items", [])):
             title = item.get("title") or item.get("name") or "Unknown result"
             url_value = item.get("url") or item.get("html_url") or item.get("link") or ""
-            entity = Entity(
-                stable_id("search", title, url_value),
-                item.get("type") or "Publication",
-                title,
-                {"source": "search_api", "search_query": query, "snippet": item.get("snippet") or item.get("description")},
-                "search_api",
-                0.74,
+            yield Finding(
+                Entity(
+                    stable_id("search", title, url_value),
+                    item.get("type") or "Publication",
+                    title,
+                    {"source": "search_api", "search_query": query, "snippet": item.get("snippet") or item.get("description")},
+                    "search_api",
+                    0.74,
+                ),
+                source_url=url_value,
+                attributes={"source": "search_api"},
             )
-            yield Finding(entity, source_url=url_value, attributes={"source": "search_api"})
         return []
